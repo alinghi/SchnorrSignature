@@ -8,13 +8,14 @@ Schnorr Signature Implementation
 Build Guide
 sudo apt-get install libssl-dev
 https://stackoverflow.com/questions/3016956/how-do-i-install-the-openssl-libraries-on-ubuntu
- -lcrypto
+ Compiler Option : -lcrypto
  -lssl
 ------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 
 //Preprocessor
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <openssl/conf.h>
 #include <openssl/evp.h>
@@ -22,7 +23,8 @@ https://stackoverflow.com/questions/3016956/how-do-i-install-the-openssl-librari
 #include <openssl/dsa.h>
 #include <openssl/engine.h>
 #include <openssl/bn.h>
- #include <openssl/crypto.h>
+#include <openssl/crypto.h>
+#include <openssl/sha.h>
 
  
 //When DEBUG and DEV
@@ -41,6 +43,8 @@ int sign(void);
 
 //Verify Function
 int verify(void);
+
+int hash(void* input, unsigned long length, unsigned char* md);
 
 //Main Function - just do menu selection
 int main(void)
@@ -164,11 +168,15 @@ Key generation for the Schnorr signature scheme is the same as DSA key generatio
 int sign(void)
 {
 	BIGNUM k;
+	BIGNUM r;
 	int returnValue=0;
 	//Check out
 	#ifdef DEBUG
 	printf("sign\n");
+	printf("number: %d\n",BN_num_bits(key->q));
+	BN_print_fp(stdout,key->p);
 	#endif
+
 	//Select a random secret integer k, 1<=k<=q-1.
 	BN_rand_range(&k,key->q);
 	//Compute r=alpha^k mod p, e=h(m||r), and s =ae+k mod q
@@ -181,6 +189,10 @@ int sign(void)
 }
 int verify(void)
 {
+	unsigned char md[SHA256_DIGEST_LENGTH]; 
+	char* a="a";
+
+	
 	int returnValue=0;
 	//Check out
 	#ifdef DEBUG
@@ -191,8 +203,35 @@ int verify(void)
 	//Accept the signature if and only if e'=e.
 
 
+	//SHA TEST
+	#ifdef DEBUG
+	printf("strlen : %d\n")
+	if(!hash(a, 1, md))
+	{
+		printf("HASH error");
+	}
+	else
+	{
+		printf("Hash: %d\n",md[0]);
+		printf("Hash: %d\n",md[1]);
+		printf("Hash: %d\n",md[2]);
+	}
+	#endif
+
 	//return 0 means false(not accepted - invalid signature)
 	//return 1 means true(accepted - valid signature)
 	//return -1 means error
 	return returnValue;
+}
+
+int hash(void* input, unsigned long length, unsigned char* md)
+{
+	SHA256_CTX context;
+	if(!SHA256_Init(&context))
+		return 0;
+	if(!SHA256_Update(&context, (unsigned char*)input, length))
+		return 0;
+	if(!SHA256_Final(md, &context))
+		return 0;
+	return 1;
 }
