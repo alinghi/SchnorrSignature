@@ -93,18 +93,18 @@ Each entity A should do the following
   	DSA_generate_parameters_ex(key,2048,NULL,0,NULL,NULL, NULL);
   	//generate priv_key, pub_key
   	
-/*
-struct
-        {
-        BIGNUM *p;              // prime number (public)
-        BIGNUM *q;              // 160-bit subprime, q | p-1 (public)
-        BIGNUM *g;              // generator of subgroup (public)
-        BIGNUM *priv_key;       // private key x
-        BIGNUM *pub_key;        // public key y = g^x
-        // ...
-        }
-DSA;
-*/
+	/*
+	struct
+	        {
+	        BIGNUM *p;              // prime number (public)
+	        BIGNUM *q;              // 160-bit subprime, q | p-1 (public)
+	        BIGNUM *g;              // generator of subgroup (public)
+	        BIGNUM *priv_key;       // private key x
+	        BIGNUM *pub_key;        // public key y = g^x
+	        // ...
+	        }
+	DSA;
+	*/
   	#ifdef DEBUG
   	printf("Generate Key Fine?: %d\n",DSA_generate_key(key));
   	#endif
@@ -169,7 +169,11 @@ int sign(void)
 {
 	BIGNUM k;
 	BIGNUM r;
+	
+	BN_CTX *ctx; //Temporary Variable ctx
+	ctx = BN_CTX_new();
 	int returnValue=0;
+
 	//Check out
 	#ifdef DEBUG
 	printf("sign\n");
@@ -179,9 +183,27 @@ int sign(void)
 
 	//Select a random secret integer k, 1<=k<=q-1.
 	BN_rand_range(&k,key->q);
-	//Compute r=alpha^k mod p, e=h(m||r), and s =ae+k mod q
-	//A's Signature for m is the pair(s,e)
+	//OpenSSL man: BN_mod_exp() computes a to the p-th power modulo m (r=a^p % m).
+	//OpenSSL man: This function uses less time and space than BN_exp().
+	// int BN_mod_exp(BIGNUM *r, BIGNUM *a, const BIGNUM *p,const BIGNUM *m, BN_CTX *ctx);
+	//BN_CTX -> temporary variable used by library functions.
+	//Book: Compute r=alpha^k mod p, e=h(m||r), and s =ae+k mod q
+	BN_mod_exp(&r, key->g, &k,key->p,ctx);
 
+	/*
+	struct
+	        {
+	        BIGNUM *p;              // prime number (public)
+	        BIGNUM *q;              // 160-bit subprime, q | p-1 (public)
+	        BIGNUM *g;              // generator of subgroup (public)  -> alpha
+	        BIGNUM *priv_key;       // private key x -> a
+	        BIGNUM *pub_key;        // public key y = g^x -> alpha^a
+	        // ...
+	        }
+	DSA;
+	*/
+	//A's Signature for m is the pair(s,e)
+		/* Get the message */
 
 	//return 1 means success
 	//return -1 means error
