@@ -258,7 +258,7 @@ int sign(void)
 	printf(BLU "\nInput your message to sign!(length limit 90000)\n" RESET);
 	scanf("%s", message);
 	printf("Your input: %s\n", message);
-	//printf("length %d\n",BN_bn2bin(r,r_char));
+	BN_bn2bin(r,r_char);
 
 	// m||r
 	input=strcat(message,r_char);
@@ -390,7 +390,7 @@ int verify(void)
 		BN_mod_mul(v,temp1,temp2,p,ctx);
 		
 
-	//printf("len %d\n",BN_bn2bin(v,v_char));//after calculate verify 
+		BN_bn2bin(v,v_char);
 	
 	
 		//m||v
@@ -466,7 +466,7 @@ void keygen(void)
 {
 	printf("Generate Key\n");
   	//generate p,q,g
-  	DSA_generate_parameters_ex(key,1024,NULL,0,NULL,NULL, NULL);
+  	DSA_generate_parameters_ex(key,512,NULL,0,NULL,NULL, NULL);
   	//generate priv_key, pub_key
   	if(!DSA_generate_key(key))
   	{
