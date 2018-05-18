@@ -25,6 +25,16 @@ https://stackoverflow.com/questions/3016956/how-do-i-install-the-openssl-librari
 #include <openssl/crypto.h>
 #include <openssl/sha.h>
 
+
+#define RED   "\x1B[31m"
+#define GRN   "\x1B[32m"
+#define YEL   "\x1B[33m"
+#define BLU   "\x1B[34m"
+#define MAG   "\x1B[35m"
+#define CYN   "\x1B[36m"
+#define WHT   "\x1B[37m"
+#define RESET "\x1B[0m"
+
  
 //When DEBUG and DEV
 #define DEBUG
@@ -96,10 +106,9 @@ Each entity A should do the following
   	//generate p,q,g
   	DSA_generate_parameters_ex(key,512,NULL,0,NULL,NULL, NULL);
   	//generate priv_key, pub_key
-
+  	/*
   	#ifdef DEBUG
   	printf("Generate Key Fine?: %d\n",DSA_generate_key(key));
-  	#endif
   	printf("\nKey p\n");
   	BN_print_fp(stdout,key->p);
     	printf("\nKey q\n");
@@ -109,7 +118,9 @@ Each entity A should do the following
     	printf("\nKey pub_key\n");
   	BN_print_fp(stdout,key->pub_key);
   	printf("\n");
-
+  	#endif
+  	*/
+  	
 	char menu='a';
 	menu=mainMenu();
 	while(menu!='4')
@@ -122,11 +133,7 @@ Each entity A should do the following
 		else if(menu=='2')
 		{
 			verify();
-			#ifdef DEBUG
-			//CA978112CA1BBDCAFAC231B39A23DC4DA786EFF8147C4E72B9807785AFEE48BB
-			char* q="a";
-			hash_test(q);
-			#endif
+			
 
 		}
 		else if(menu=='3')
@@ -134,6 +141,13 @@ Each entity A should do the following
 			keygen();
 		}
 		menu=mainMenu();
+		/*------Hash Test
+			#ifdef DEBUG
+			//CA978112CA1BBDCAFAC231B39A23DC4DA786EFF8147C4E72B9807785AFEE48BB
+			char* q="a";
+			hash_test(q);
+			#endif
+		*/
 	}
 
   	/* Clean up */
@@ -178,6 +192,13 @@ Key generation for the Schnorr signature scheme is the same as DSA key generatio
 
 int sign(void)
 {
+
+	char string_p[1025];
+	char string_q[1025];
+	char string_g[1025];
+	char string_pub_key[1025];
+	char string_priv_key[1025];
+
 	BIGNUM* k=BN_new();
 	BN_init(k);
 	BIGNUM* r=BN_new();
@@ -188,9 +209,28 @@ int sign(void)
 	BN_init(e);
 	BIGNUM* temp=BN_new();
 	BN_init(temp);
+
 	unsigned char r_char[257];
 	unsigned char* message[90001];
 	unsigned char* input;
+
+	//Obtain A's authentic public key
+	printf("\n Input Public Key p: \n");
+	scanf("%s",string_p);
+	BN_hex2bn(&(key->p),string_p);
+	printf("\n Input Public Key q: \n");
+	scanf("%s",string_q);
+	BN_hex2bn(&(key->q),string_q);
+	printf("\n Input Public Key g: \n");
+	scanf("%s",string_g);
+	BN_hex2bn(&(key->g),string_g);
+	printf("\n Input Public Key pub_key: \n");
+	scanf("%s",string_pub_key);
+	BN_hex2bn(&(key->pub_key),string_pub_key);
+	printf("\n Input Public Key priv_key: \n");
+	scanf("%s",string_priv_key);
+	BN_hex2bn(&(key->priv_key),string_priv_key);
+
 	
 	BN_CTX *ctx; //Temporary Variable ctx
 	ctx = BN_CTX_new();
@@ -213,6 +253,7 @@ int sign(void)
 	//BN_CTX -> temporary variable used by library functions.
 	//Book: Compute r=alpha^k mod p, e=h(m||r), and s =ae+k mod q
 	BN_mod_exp(r, key->g, k,key->p,ctx);
+	
 	unsigned char e_hash[SHA256_DIGEST_LENGTH]; 
 	printf("\nInput your message to sign!(length limit 90000)\n");
 	scanf("%s", message);
@@ -221,15 +262,9 @@ int sign(void)
 	printf("len %d\n",BN_bn2bin(r,r_char));
 	#endif DEBUG
 
-	#ifdef DEBUG
-	printf("message len %d\n",strlen(message));
-	#endif DEBUG
 	// m||r
 	input=strcat(message,r_char);
 
-	#ifdef DEBUG
-	printf("message len %d\n",strlen(message));
-	#endif DEBUG
 	// h(m||r)
 	if(!hash(input, strlen(input), e_hash))
 	{
@@ -346,7 +381,7 @@ int verify(void)
 	printf("\nInput your message to verity!(length limit 90000)\n");
 	scanf("%s", message);
 	printf("Your input: %s\n", message);
-	printf("message len %d\n",strlen(message));
+	printf("message len %i\n",strlen(message));
 	//Compute v=alpha^s y^{-e} mod p and e'=h(m||v)
 		//Handbook : alpha^s ->temp1
 		//Here : g^s -> temp1
@@ -383,6 +418,14 @@ int verify(void)
 	printf("\nSignature pair e_prime: \n");
 	BN_print_fp(stdout,e_prime);
 	printf("\n");
+	if(BN_cmp(e,e_prime)==0)
+	{
+		printf(GRN "\n\nValid Signature!\n\n" RESET);
+	}
+	else
+	{
+		printf(RED "\n\nInvalid Signature\n\n" RESET);
+	}
 	//return 0 means false(not accepted - invalid signature)
 	//return 1 means true(accepted - valid signature)
 	//return -1 means error
@@ -409,7 +452,7 @@ void hash_test(char* input)
 	BN_init(ret);
 	unsigned char md[SHA256_DIGEST_LENGTH]; 
 	//SHA TEST
-	printf("strlen : %d\n",strlen(input));
+	printf("strlen : %i\n",strlen(input));
 	if(!hash(input, strlen(input), md))
 	{
 		printf("HASH error");
@@ -428,5 +471,24 @@ void hash_test(char* input)
 
 void keygen(void)
 {
-
+	printf("Generate Key\n");
+  	//generate p,q,g
+  	DSA_generate_parameters_ex(key,512,NULL,0,NULL,NULL, NULL);
+  	//generate priv_key, pub_key
+  	if(!DSA_generate_key(key))
+  	{
+  		printf("key generation error");
+  		return;
+  	}
+  	printf(BLU "\nKey p\n" RESET);
+  	BN_print_fp(stdout,key->p);
+    	printf(BLU "\nKey q\n" RESET);
+  	BN_print_fp(stdout,key->q);
+    	printf(BLU "\nKey g\n" RESET);
+  	BN_print_fp(stdout,key->g);
+    	printf(BLU "\nKey pub_key\n" RESET);
+  	BN_print_fp(stdout,key->pub_key);
+  	printf(BLU "\nKey priv_key\n" RESET);
+  	BN_print_fp(stdout,key->priv_key);
+  	printf("\n\n");
 }
