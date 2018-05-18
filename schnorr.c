@@ -8,8 +8,7 @@ Schnorr Signature Implementation
 Build Guide
 sudo apt-get install libssl-dev
 https://stackoverflow.com/questions/3016956/how-do-i-install-the-openssl-libraries-on-ubuntu
- Compiler Option : -lcrypto
- -lssl
+ Compiler Option : -lssl
 ------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 
 //Preprocessor
@@ -32,6 +31,7 @@ https://stackoverflow.com/questions/3016956/how-do-i-install-the-openssl-librari
 
 //Global Variable
 DSA* key;
+DSA* key_input;
 
 
 //Function prototype
@@ -45,6 +45,8 @@ int sign(void);
 int verify(void);
 
 int hash(void* input, unsigned long length, unsigned char* md);
+void hash_test(char* input);
+void keygen(void);
 
 //Main Function - just do menu selection
 int main(void)
@@ -89,29 +91,28 @@ Each entity A should do the following
 
   	//init
   	key=DSA_new();
+  	key_input=DSA_new();
+
   	//generate p,q,g
-  	DSA_generate_parameters_ex(key,2048,NULL,0,NULL,NULL, NULL);
+  	DSA_generate_parameters_ex(key,512,NULL,0,NULL,NULL, NULL);
   	//generate priv_key, pub_key
-  	
-	/*
-	struct
-	        {
-	        BIGNUM *p;              // prime number (public)
-	        BIGNUM *q;              // 160-bit subprime, q | p-1 (public)
-	        BIGNUM *g;              // generator of subgroup (public)
-	        BIGNUM *priv_key;       // private key x
-	        BIGNUM *pub_key;        // public key y = g^x
-	        // ...
-	        }
-	DSA;
-	*/
+
   	#ifdef DEBUG
   	printf("Generate Key Fine?: %d\n",DSA_generate_key(key));
   	#endif
+  	printf("\nKey p\n");
+  	BN_print_fp(stdout,key->p);
+    	printf("\nKey q\n");
+  	BN_print_fp(stdout,key->q);
+    	printf("\nKey g\n");
+  	BN_print_fp(stdout,key->g);
+    	printf("\nKey pub_key\n");
+  	BN_print_fp(stdout,key->pub_key);
+  	printf("\n");
 
 	char menu='a';
 	menu=mainMenu();
-	while(menu!='3')
+	while(menu!='4')
 	{
 		if(menu=='1')
 		{
@@ -121,7 +122,16 @@ Each entity A should do the following
 		else if(menu=='2')
 		{
 			verify();
+			#ifdef DEBUG
+			//CA978112CA1BBDCAFAC231B39A23DC4DA786EFF8147C4E72B9807785AFEE48BB
+			char* q="a";
+			hash_test(q);
+			#endif
 
+		}
+		else if(menu=='3')
+		{
+			keygen();
 		}
 		menu=mainMenu();
 	}
@@ -148,7 +158,8 @@ char mainMenu(void)
 	printf("--------------Schnorr Signature---------------------\n");
 	printf("--------------1. Sign   ----------------------------\n");
 	printf("--------------2. Veirfy ----------------------------\n");
-	printf("--------------3. Exit   ----------------------------\n");	
+	printf("--------------3. KeyGeneration ---------------------\n");
+	printf("--------------4. Exit   ----------------------------\n");	
 	printf("Select the number : \n");
 	scanf(" %c",&select);
 	return select;
@@ -167,29 +178,78 @@ Key generation for the Schnorr signature scheme is the same as DSA key generatio
 
 int sign(void)
 {
-	BIGNUM k;
-	BIGNUM r;
+	BIGNUM* k=BN_new();
+	BN_init(k);
+	BIGNUM* r=BN_new();
+	BN_init(r);
+	BIGNUM* s=BN_new();
+	BN_init(s);
+	BIGNUM* e=BN_new();
+	BN_init(e);
+	BIGNUM* temp=BN_new();
+	BN_init(temp);
+	unsigned char r_char[257];
+	unsigned char* message[90001];
+	unsigned char* input;
 	
 	BN_CTX *ctx; //Temporary Variable ctx
 	ctx = BN_CTX_new();
 	int returnValue=0;
 
 	//Check out
+	/*
 	#ifdef DEBUG
 	printf("sign\n");
 	printf("number: %d\n",BN_num_bits(key->q));
 	BN_print_fp(stdout,key->p);
 	#endif
-
+	*/
 	//Select a random secret integer k, 1<=k<=q-1.
-	BN_rand_range(&k,key->q);
+	BN_rand_range(k,key->q);
 	//OpenSSL man: BN_mod_exp() computes a to the p-th power modulo m (r=a^p % m).
 	//OpenSSL man: This function uses less time and space than BN_exp().
 	// int BN_mod_exp(BIGNUM *r, BIGNUM *a, const BIGNUM *p,const BIGNUM *m, BN_CTX *ctx);
+	/*-------------------------------------------------------------------------------------------------------------------------------------*/
 	//BN_CTX -> temporary variable used by library functions.
 	//Book: Compute r=alpha^k mod p, e=h(m||r), and s =ae+k mod q
-	BN_mod_exp(&r, key->g, &k,key->p,ctx);
+	BN_mod_exp(r, key->g, k,key->p,ctx);
+	unsigned char e_hash[SHA256_DIGEST_LENGTH]; 
+	printf("\nInput your message to sign!(length limit 90000)\n");
+	scanf("%s", message);
+	printf("Your input: %s\n", message);
+	#ifdef DEBUG
+	printf("len %d\n",BN_bn2bin(r,r_char));
+	#endif DEBUG
 
+	#ifdef DEBUG
+	printf("message len %d\n",strlen(message));
+	#endif DEBUG
+	// m||r
+	input=strcat(message,r_char);
+
+	#ifdef DEBUG
+	printf("message len %d\n",strlen(message));
+	#endif DEBUG
+	// h(m||r)
+	if(!hash(input, strlen(input), e_hash))
+	{
+		printf("HASH error");
+	}
+
+	//hash digest=>BN e
+	BN_bin2bn(e_hash,sizeof(e_hash),e);
+
+	#ifdef DEBUG
+	BN_print_fp(stdout,e);
+	printf("\n");
+	#endif
+
+
+	// s=ae+k mod q
+		//a * e -> temp
+	BN_mod_mul(temp,key->priv_key,e,key->q,ctx);
+		//temp + k -> s
+	BN_mod_add(s,temp,k,key->q,ctx);
 	/*
 	struct
 	        {
@@ -204,42 +264,125 @@ int sign(void)
 	*/
 	//A's Signature for m is the pair(s,e)
 		/* Get the message */
-
+	printf("\nSignature pair s : \n");
+	BN_print_fp(stdout,s);
+	printf("\nSignature pair e : \n");
+	BN_print_fp(stdout,e);
+	printf("\n\n");
 	//return 1 means success
 	//return -1 means error
 	return returnValue;
 }
 int verify(void)
 {
-	unsigned char md[SHA256_DIGEST_LENGTH]; 
-	char* a="a";
-
-	
 	int returnValue=0;
+	char string_s[1025];
+	char string_e[1025];
+	char string_p[1025];
+	char string_q[1025];
+	char string_g[1025];
+	char string_pub_key[1025];
+	unsigned char v_char[257];
+	unsigned char* message[90001];
+	unsigned char* input;
+
+	BIGNUM* v=BN_new();
+	BN_init(v);
+	BIGNUM* inv_pub_key=BN_new();
+	BN_init(inv_pub_key);
+	BIGNUM* s=BN_new();
+	BN_init(s);
+	BIGNUM* e=BN_new();
+	BN_init(e);
+	BIGNUM* p=BN_new();
+	BN_init(p);
+	BIGNUM* q=BN_new();
+	BN_init(q);
+	BIGNUM* g=BN_new();
+	BN_init(g);
+	BIGNUM* pub_key=BN_new();
+	BN_init(pub_key);
+	BIGNUM* temp1=BN_new();
+	BN_init(temp1);
+	BIGNUM* temp2=BN_new();
+	BN_init(temp2);
+	BIGNUM* e_prime=BN_new();
+	BN_init(e_prime);
+
+
+	BN_CTX *ctx; //Temporary Variable ctx
+	ctx = BN_CTX_new();
+
+	// int BN_hex2bn(BIGNUM **a, const char *str);
+
 	//Check out
 	#ifdef DEBUG
 	printf("verify\n");
 	#endif
+	//Get signature
+	printf("\n Input Signature pair s: \n");
+	scanf("%s",string_s);
+	BN_hex2bn(&s,string_s);
+	printf("\n Input Signature pair e: \n");
+	scanf("%s",string_e);
+	BN_hex2bn(&e,string_e);
 	//Obtain A's authentic public key
+	printf("\n Input Public Key p: \n");
+	scanf("%s",string_p);
+	BN_hex2bn(&p,string_p);
+	printf("\n Input Public Key q: \n");
+	scanf("%s",string_q);
+	BN_hex2bn(&q,string_q);
+	printf("\n Input Public Key g: \n");
+	scanf("%s",string_g);
+	BN_hex2bn(&g,string_g);
+	printf("\n Input Public Key pub_key: \n");
+	scanf("%s",string_pub_key);
+	BN_hex2bn(&pub_key,string_pub_key);
+
+
+	unsigned char e_hash[SHA256_DIGEST_LENGTH]; 
+	//Obtain message
+	printf("\nInput your message to verity!(length limit 90000)\n");
+	scanf("%s", message);
+	printf("Your input: %s\n", message);
+	printf("message len %d\n",strlen(message));
 	//Compute v=alpha^s y^{-e} mod p and e'=h(m||v)
+		//Handbook : alpha^s ->temp1
+		//Here : g^s -> temp1
+		BN_mod_exp(temp1,g,s,p,ctx);
+
+		//Handbook : y^-e -> temp2
+		//Here : inv_pub_key^e -> temp2
+			//Calculate inverse of y
+			//pub_key -> inv_pub_key
+			BN_mod_inverse(inv_pub_key,pub_key,p,ctx);
+			//inv_pub_key^e 
+			BN_mod_exp(temp2,inv_pub_key,e,p,ctx);
+		//temp1 * temp2
+		BN_mod_mul(v,temp1,temp2,p,ctx);
+		
+
+	printf("len %d\n",BN_bn2bin(v,v_char));//after calculate verify 
+	
+	
+		//m||v
+		input=strcat(message,v_char);
+		printf("message len %d\n",strlen(message));
+		//h(m||v)
+		if(!hash(input, strlen(input), e_hash))
+		{
+			printf("HASH error");
+		}
+
+	//hash digest=>BN e
+	BN_bin2bn(e_hash,sizeof(e_hash),e_prime);
 	//Accept the signature if and only if e'=e.
-
-
-	//SHA TEST
-	#ifdef DEBUG
-	printf("strlen : %d\n")
-	if(!hash(a, 1, md))
-	{
-		printf("HASH error");
-	}
-	else
-	{
-		printf("Hash: %d\n",md[0]);
-		printf("Hash: %d\n",md[1]);
-		printf("Hash: %d\n",md[2]);
-	}
-	#endif
-
+	printf("\nSignature pair e : \n");
+	BN_print_fp(stdout,e);
+	printf("\nSignature pair e_prime: \n");
+	BN_print_fp(stdout,e_prime);
+	printf("\n");
 	//return 0 means false(not accepted - invalid signature)
 	//return 1 means true(accepted - valid signature)
 	//return -1 means error
@@ -256,4 +399,34 @@ int hash(void* input, unsigned long length, unsigned char* md)
 	if(!SHA256_Final(md, &context))
 		return 0;
 	return 1;
+}
+
+void hash_test(char* input)
+{
+	//input = a
+	//hash = CA978112CA1BBDCAFAC231B39A23DC4DA786EFF8147C4E72B9807785AFEE48BB
+	BIGNUM* ret=BN_new();
+	BN_init(ret);
+	unsigned char md[SHA256_DIGEST_LENGTH]; 
+	//SHA TEST
+	printf("strlen : %d\n",strlen(input));
+	if(!hash(input, strlen(input), md))
+	{
+		printf("HASH error");
+	}
+	else
+	{
+		printf("Hash: %d\n",md[0]);
+		printf("Hash: %d\n",md[1]);
+		printf("Hash: %d\n",md[2]);
+	}
+	BN_bin2bn(md,sizeof(md),ret);
+	BN_print_fp(stdout,ret);
+	printf("\n");
+	printf("--------   Hash Test Done   --------\n");
+}
+
+void keygen(void)
+{
+
 }
