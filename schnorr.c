@@ -258,7 +258,7 @@ int sign(void)
 	printf(BLU "\nInput your message to sign!(length limit 90000)\n" RESET);
 	scanf("%s", message);
 	printf("Your input: %s\n", message);
-	printf("length %d\n",BN_bn2bin(r,r_char));
+	//printf("length %d\n",BN_bn2bin(r,r_char));
 
 	// m||r
 	input=strcat(message,r_char);
@@ -373,7 +373,7 @@ int verify(void)
 	printf(BLU "\nInput your message to verify!(length limit 90000)\n" RESET);
 	scanf("%s", message);
 	printf("Your input: %s\n", message);
-	printf("message len %i\n",strlen(message));
+	//printf("message len %i\n",strlen(message));
 	//Compute v=alpha^s y^{-e} mod p and e'=h(m||v)
 		//Handbook : alpha^s ->temp1
 		//Here : g^s -> temp1
@@ -390,12 +390,12 @@ int verify(void)
 		BN_mod_mul(v,temp1,temp2,p,ctx);
 		
 
-	printf("len %d\n",BN_bn2bin(v,v_char));//after calculate verify 
+	//printf("len %d\n",BN_bn2bin(v,v_char));//after calculate verify 
 	
 	
 		//m||v
 		input=strcat(message,v_char);
-		printf("message len %d\n",strlen(message));
+		//printf("message len %d\n",strlen(message));
 		//h(m||v)
 		if(!hash(input, strlen(input), e_hash))
 		{
