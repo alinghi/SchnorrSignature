@@ -210,8 +210,9 @@ int sign(void)
 	BIGNUM* temp=BN_new();
 	BN_init(temp);
 
-	unsigned char r_char[257];
-	unsigned char* message[90001];
+	unsigned char* r_char = malloc((512) * sizeof(char));
+	memset(r_char,0,512);
+	unsigned char message[90001];
 	unsigned char* input;
 
 	//Obtain A's authentic public key
@@ -260,9 +261,9 @@ int sign(void)
 	printf("Your input: %s\n", message);
 	BN_bn2bin(r,r_char);
 
+
 	// m||r
 	input=strcat(message,r_char);
-
 	// h(m||r)
 	if(!hash(input, strlen(input), e_hash))
 	{
@@ -309,8 +310,9 @@ int verify(void)
 	char string_q[1025];
 	char string_g[1025];
 	char string_pub_key[1025];
-	unsigned char v_char[257];
-	unsigned char* message[90001];
+	unsigned char* v_char = malloc((512) * sizeof(char));
+	memset(v_char,0,512);
+	unsigned char message[90001];
 	unsigned char* input;
 
 	BIGNUM* v=BN_new();
@@ -395,7 +397,6 @@ int verify(void)
 	
 		//m||v
 		input=strcat(message,v_char);
-		//printf("message len %d\n",strlen(message));
 		//h(m||v)
 		if(!hash(input, strlen(input), e_hash))
 		{
@@ -466,7 +467,7 @@ void keygen(void)
 {
 	printf("Generate Key\n");
   	//generate p,q,g
-  	DSA_generate_parameters_ex(key,512,NULL,0,NULL,NULL, NULL);
+  	DSA_generate_parameters_ex(key,1024,NULL,0,NULL,NULL, NULL);
   	//generate priv_key, pub_key
   	if(!DSA_generate_key(key))
   	{
