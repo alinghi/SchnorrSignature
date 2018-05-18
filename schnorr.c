@@ -37,7 +37,7 @@ https://stackoverflow.com/questions/3016956/how-do-i-install-the-openssl-librari
 
  
 //When DEBUG and DEV
-#define DEBUG
+//#define DEBUG
 
 //Global Variable
 DSA* key;
@@ -215,19 +215,19 @@ int sign(void)
 	unsigned char* input;
 
 	//Obtain A's authentic public key
-	printf("\n Input Public Key p: \n");
+	printf(BLU "\n Input Public Key p: \n" RESET);
 	scanf("%s",string_p);
 	BN_hex2bn(&(key->p),string_p);
-	printf("\n Input Public Key q: \n");
+	printf(BLU "\n Input Public Key q: \n" RESET);
 	scanf("%s",string_q);
 	BN_hex2bn(&(key->q),string_q);
-	printf("\n Input Public Key g: \n");
+	printf(BLU "\n Input Public Key g: \n" RESET);
 	scanf("%s",string_g);
 	BN_hex2bn(&(key->g),string_g);
-	printf("\n Input Public Key pub_key: \n");
+	printf(BLU "\n Input Public Key pub_key: \n" RESET);
 	scanf("%s",string_pub_key);
 	BN_hex2bn(&(key->pub_key),string_pub_key);
-	printf("\n Input Public Key priv_key: \n");
+	printf(BLU "\n Input Private Key priv_key: \n" RESET);
 	scanf("%s",string_priv_key);
 	BN_hex2bn(&(key->priv_key),string_priv_key);
 
@@ -255,12 +255,10 @@ int sign(void)
 	BN_mod_exp(r, key->g, k,key->p,ctx);
 	
 	unsigned char e_hash[SHA256_DIGEST_LENGTH]; 
-	printf("\nInput your message to sign!(length limit 90000)\n");
+	printf(BLU "\nInput your message to sign!(length limit 90000)\n" RESET);
 	scanf("%s", message);
 	printf("Your input: %s\n", message);
-	#ifdef DEBUG
-	printf("len %d\n",BN_bn2bin(r,r_char));
-	#endif DEBUG
+	printf("length %d\n",BN_bn2bin(r,r_char));
 
 	// m||r
 	input=strcat(message,r_char);
@@ -273,12 +271,6 @@ int sign(void)
 
 	//hash digest=>BN e
 	BN_bin2bn(e_hash,sizeof(e_hash),e);
-
-	#ifdef DEBUG
-	BN_print_fp(stdout,e);
-	printf("\n");
-	#endif
-
 
 	// s=ae+k mod q
 		//a * e -> temp
@@ -299,9 +291,9 @@ int sign(void)
 	*/
 	//A's Signature for m is the pair(s,e)
 		/* Get the message */
-	printf("\nSignature pair s : \n");
+	printf(BLU "\nSignature pair s : \n" RESET);
 	BN_print_fp(stdout,s);
-	printf("\nSignature pair e : \n");
+	printf(BLU "\nSignature pair e : \n" RESET);
 	BN_print_fp(stdout,e);
 	printf("\n\n");
 	//return 1 means success
@@ -355,30 +347,30 @@ int verify(void)
 	printf("verify\n");
 	#endif
 	//Get signature
-	printf("\n Input Signature pair s: \n");
+	printf(BLU "\n Input Signature pair s: \n" RESET);
 	scanf("%s",string_s);
 	BN_hex2bn(&s,string_s);
-	printf("\n Input Signature pair e: \n");
+	printf(BLU "\n Input Signature pair e: \n" RESET);
 	scanf("%s",string_e);
 	BN_hex2bn(&e,string_e);
 	//Obtain A's authentic public key
-	printf("\n Input Public Key p: \n");
+	printf(BLU "\n Input Public Key p: \n" RESET);
 	scanf("%s",string_p);
 	BN_hex2bn(&p,string_p);
-	printf("\n Input Public Key q: \n");
+	printf(BLU "\n Input Public Key q: \n" RESET);
 	scanf("%s",string_q);
 	BN_hex2bn(&q,string_q);
-	printf("\n Input Public Key g: \n");
+	printf(BLU "\n Input Public Key g: \n" RESET);
 	scanf("%s",string_g);
 	BN_hex2bn(&g,string_g);
-	printf("\n Input Public Key pub_key: \n");
+	printf(BLU "\n Input Public Key pub_key: \n" RESET);
 	scanf("%s",string_pub_key);
 	BN_hex2bn(&pub_key,string_pub_key);
 
 
 	unsigned char e_hash[SHA256_DIGEST_LENGTH]; 
 	//Obtain message
-	printf("\nInput your message to verity!(length limit 90000)\n");
+	printf(BLU "\nInput your message to verify!(length limit 90000)\n" RESET);
 	scanf("%s", message);
 	printf("Your input: %s\n", message);
 	printf("message len %i\n",strlen(message));
@@ -413,9 +405,9 @@ int verify(void)
 	//hash digest=>BN e
 	BN_bin2bn(e_hash,sizeof(e_hash),e_prime);
 	//Accept the signature if and only if e'=e.
-	printf("\nSignature pair e : \n");
+	printf(BLU "\nSignature pair e : \n" RESET);
 	BN_print_fp(stdout,e);
-	printf("\nSignature pair e_prime: \n");
+	printf(BLU "\nSignature pair e_prime: \n" RESET);
 	BN_print_fp(stdout,e_prime);
 	printf("\n");
 	if(BN_cmp(e,e_prime)==0)
@@ -432,6 +424,7 @@ int verify(void)
 	return returnValue;
 }
 
+//SHA256
 int hash(void* input, unsigned long length, unsigned char* md)
 {
 	SHA256_CTX context;
@@ -473,7 +466,7 @@ void keygen(void)
 {
 	printf("Generate Key\n");
   	//generate p,q,g
-  	DSA_generate_parameters_ex(key,512,NULL,0,NULL,NULL, NULL);
+  	DSA_generate_parameters_ex(key,1024,NULL,0,NULL,NULL, NULL);
   	//generate priv_key, pub_key
   	if(!DSA_generate_key(key))
   	{
